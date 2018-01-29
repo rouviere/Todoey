@@ -10,8 +10,9 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
   
-  let itemArray = ["Get Job", "Travel to Japan", "Pay off debt"]
+  var itemArray = ["Get Job", "Travel to Japan", "Pay off debt"]
 
+ 
   override func viewDidLoad() {
     super.viewDidLoad()
     
@@ -54,9 +55,34 @@ class ToDoListViewController: UITableViewController {
   }
   
   
+  //MARK - Add New Items
   
-  
-  
+  @IBAction func AddButtonPressed(_ sender: UIBarButtonItem) {
+    
+    var textField = UITextField() // local variable - available only within AddButtonPressed. This is created to hold the value of the newly created task
+    
+    let alert = UIAlertController(title: "Add New To Do Item", message: "", preferredStyle: .alert)
+    
+    let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+      
+      self.itemArray.append(textField.text!) // this appends the new value to the itemArray
+      
+      self.tableView.reloadData() // this refreshes the table after the new items is added to the array!
+      
+    }
+    
+    // This adds a field to the alert popup where you can add a new To Do Item.
+    alert.addTextField { (alertTextField) in
+      alertTextField.placeholder = "Create new item"
+      textField = alertTextField // Here we add the value that is entered in the field to the var
+      // print(alertTextField.text)
+    }
+    
+    // Add alert action item
+    alert.addAction(action)
+    
+    present(alert, animated: true, completion: nil)
+  }
 
 
 }
