@@ -8,7 +8,7 @@
 
 import Foundation
 
-class Item {
+class Item: Codable {   // by adding Encodable the Item class can be encoded into a Plist file or JSON
   var title: String = ""
   var done: Bool = false
 }

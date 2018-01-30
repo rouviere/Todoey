@@ -11,29 +11,14 @@ import UIKit
 class ToDoListViewController: UITableViewController {
   
   var itemArray = [Item]()
+  let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
   
-  let defaults = UserDefaults.standard
-
- 
   override func viewDidLoad() {
     super.viewDidLoad()
     
-    let newItem = Item()
-    newItem.title = "Get a Job"
-    itemArray.append(newItem)
+    // print(dataFilePath)
     
-    let newItem2 = Item()
-    newItem2.title = "Go to Japan"
-    itemArray.append(newItem2)
-    
-    let newItem3 = Item()
-    newItem3.title = "Pay off Debts"
-    itemArray.append(newItem3)
-    
-    if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-      itemArray = items
-    }
-    
+    loadItems()
   }
 
   //MARK - TableView Datasource
@@ -49,16 +34,7 @@ class ToDoListViewController: UITableViewController {
     
     cell.textLabel?.text = item.title
     
-    // Ternary operator ==>
-    // value = condition ? valueIfTrue : valueIfFalse
-    
     cell.accessoryType = item.done ? .checkmark : .none  // replaces the following:
-    
-//    if item.done == true {
-//      cell.accessoryType = .checkmark
-//    } else {
-//      cell.accessoryType = .none
-//    }
     
     return cell
   }
@@ -66,24 +42,14 @@ class ToDoListViewController: UITableViewController {
   //MARK - TableView Delegate Methods
   
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-    // print(indexPath.row) // prints the row index 0, 1, 2, ...
+  
     print(itemArray[indexPath.row]) // prints the name of the array item
-    
-    // set the object value to done or not done - then in numberOfRowsInSection, set the corresponding checkmark values
     
     itemArray[indexPath.row].done = !itemArray[indexPath.row].done  // the ! signifies the opposite or not
     
-//    This is the wordy version of the above
-//    if itemArray[indexPath.row].done == false {
-//      itemArray[indexPath.row].done = true
-//    } else {
-//      itemArray[indexPath.row].done = false
-//    }
+    saveItems()
     
-    tableView.reloadData() // you have to do this to display the checkmark changes.
-    
-    // At this point the cells remain gray when you click on them. To highlight briefly when you click them and then return to white requires this:
-    tableView.deselectRow(at: indexPath, animated: true)
+    tableView.deselectRow(at: indexPath, animated: true) // At this point the cells remain gray when you click on them.
   }
   
   
@@ -102,23 +68,43 @@ class ToDoListViewController: UITableViewController {
       
       self.itemArray.append(newItem) // this appends the new value to the itemArray
       
-      self.defaults.set(self.itemArray, forKey: "TodoListArray") // add item to user defaults
-      
-      self.tableView.reloadData() // this refreshes the table after the new items is added to the array!
+      self.saveItems()
       
     }
     
-    // This adds a field to the alert popup where you can add a new To Do Item.
     alert.addTextField { (alertTextField) in
       alertTextField.placeholder = "Create new item"
       textField = alertTextField // Here we add the value that is entered in the field to the var
-      // print(alertTextField.text)
     }
     
-    // Add alert action item
-    alert.addAction(action)
-    
+    alert.addAction(action) // Add alert action item
     present(alert, animated: true, completion: nil)
+  }
+  
+  //MAARK - Model Manipulation Methods
+  
+  func saveItems() {
+    
+    let encoder = PropertyListEncoder() // create a new encoder document
+    
+    do {
+      let data = try encoder.encode(itemArray)
+      try data.write(to: dataFilePath!) // requires self because you are accessing a global value
+    } catch {
+      print("Error encoding item array, \(error)")
+    }
+    self.tableView.reloadData() // this refreshes the table after the new items is added to the array!
+  }
+  
+  func loadItems() {
+    if let data = try? Data(contentsOf: dataFilePath!) {
+      let decoder = PropertyListDecoder()
+      do {
+      itemArray = try decoder.decode([Item].self, from: data)
+      } catch {
+        print("Error decoding item array, \(error)")
+      }
+    }
   }
 
 
