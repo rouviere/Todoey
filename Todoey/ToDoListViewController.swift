@@ -11,20 +11,20 @@ import UIKit
 class ToDoListViewController: UITableViewController {
   
   var itemArray = ["Get Job", "Travel to Japan", "Pay off debt"]
+  
+  let defaults = UserDefaults.standard
 
  
   override func viewDidLoad() {
     super.viewDidLoad()
     
+    if let items = defaults.array(forKey: "TodoListArray") as? [String] {
+      itemArray = items
+    }
+    
   }
 
   //MARK - TableView Datasource
- 
-  /* this is not needed if you only have one section!
-  override func numberOfSections(in tableView: UITableView) -> Int {
-    return itemArry.count
-  }
- */
   
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     return itemArray.count
@@ -66,6 +66,8 @@ class ToDoListViewController: UITableViewController {
     let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
       
       self.itemArray.append(textField.text!) // this appends the new value to the itemArray
+      
+      self.defaults.set(self.itemArray, forKey: "TodoListArray") // add item to user defaults
       
       self.tableView.reloadData() // this refreshes the table after the new items is added to the array!
       
