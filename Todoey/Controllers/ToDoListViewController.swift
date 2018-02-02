@@ -7,18 +7,28 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController: UITableViewController {
   
   var itemArray = [Item]()
-  let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+  
+  var selectedCategory : Category? {
+    didSet{
+      loadItems()
+    }
+  }
+  
+  // This is how you connect to the AppDelegate to pull in the persistentContainer, etc.
+  let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
   
   override func viewDidLoad() {
     super.viewDidLoad()
     
-    // print(dataFilePath)
+    // Find the path to where the app is so we can view the sqlite db
+    print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
     
-    loadItems()
+   // loadItems() // see didSet above
   }
 
   //MARK - TableView Datasource
@@ -45,6 +55,10 @@ class ToDoListViewController: UITableViewController {
   
     print(itemArray[indexPath.row]) // prints the name of the array item
     
+   // context.delet(itemArray[indexPath.row]) // step 1 - removes it from the context
+   // itemArray.remove(at: indexPath.row) // step 2 - removes an item from the tableview
+    
+    
     itemArray[indexPath.row].done = !itemArray[indexPath.row].done  // the ! signifies the opposite or not
     
     saveItems()
@@ -62,10 +76,14 @@ class ToDoListViewController: UITableViewController {
     let alert = UIAlertController(title: "Add New To Do Item", message: "", preferredStyle: .alert)
     
     let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+      // What will happen once the user clicks the Add Item button on our UIAlert
       
-      let newItem = Item()
+      
+      // Here we create new NSManagedObjects - essentiall a row for each Entity and its Attributes
+      let newItem = Item(context: self.context)
       newItem.title = textField.text!
-      
+      newItem.done = false
+      newItem.parentCategory = self.selectedCategory
       self.itemArray.append(newItem) // this appends the new value to the itemArray
       
       self.saveItems()
@@ -85,28 +103,65 @@ class ToDoListViewController: UITableViewController {
   
   func saveItems() {
     
-    let encoder = PropertyListEncoder() // create a new encoder document
-    
     do {
-      let data = try encoder.encode(itemArray)
-      try data.write(to: dataFilePath!) // requires self because you are accessing a global value
+      try context.save() // Attempts to commmit changes to the persistentStore (database)
     } catch {
-      print("Error encoding item array, \(error)")
+      print("Error saving context \(error)")
     }
-    self.tableView.reloadData() // this refreshes the table after the new items is added to the array!
+    self.tableView.reloadData()
   }
   
-  func loadItems() {
-    if let data = try? Data(contentsOf: dataFilePath!) {
-      let decoder = PropertyListDecoder()
-      do {
-      itemArray = try decoder.decode([Item].self, from: data)
-      } catch {
-        print("Error decoding item array, \(error)")
+  
+  func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
+    
+    let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+    
+    if let additionalPredicate = predicate {request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+    } else {
+      request.predicate = categoryPredicate
+    }
+
+    do {
+     itemArray = try context.fetch(request)
+    } catch {
+      print("Error fetching data from context \(error)")
+    }
+    
+    tableView.reloadData()
+  }
+}
+
+
+//MARK - Searchbar
+extension ToDoListViewController: UISearchBarDelegate {
+  
+  func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+    
+    let request : NSFetchRequest<Item> = Item.fetchRequest()  // Load items with a new request
+    
+    let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // Then modify it with a search
+    
+    request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)] // Then with sort order
+    
+    loadItems(with: request, predicate: predicate) // Then we pass that request into our load items method
+    
+  }
+  
+  func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+    if searchBar.text?.count == 0 {
+      loadItems()
+      
+      
+      DispatchQueue.main.async {  // makes it possible to dismiss the keyboard while the app is running
+        searchBar.resignFirstResponder()
       }
+      
     }
   }
-
-
 }
+
+
+
+
+
 
